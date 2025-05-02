@@ -1,0 +1,449 @@
+---
+title: "A Regression and Visualization Study of Data Science Job Market Trends"
+author: " Abdul Sameer Shaik
+          Deepashree Srinivasa Rao Rannore
+          Jeevith Doddalingegowda Rama
+          Sunidi Vijayakrishna Kumar"
+date: "2025-04-15"
+output: pdf_document
+---
+
+```{r}
+library(dplyr)
+library(readr)
+
+jobs_data <- read_csv("C:/Users/deepa/Documents/jobs_in_data.csv")
+cost_data <- read_csv("C:/Users/deepa/Documents/Cost_of_Living_and_Income_Extended.csv")
+#View(jobs_data)
+#View(cost_data)
+
+```
+
+```{r}
+jobs_data <- jobs_data %>%
+  mutate(company_location = tolower(company_location),
+         work_year = as.integer(work_year))
+
+cost_data <- cost_data %>%
+  rename(company_location = Country,  
+         year = Year) %>%
+  mutate(company_location = tolower(company_location),
+         year = as.integer(year))
+
+merged_data <- jobs_data %>%
+  left_join(cost_data, by = c("company_location", "work_year" = "year"))
+
+```
+
+```{r}
+merged_data <- merged_data %>%
+  mutate(adjusted_salary = salary_in_usd / Cost_of_Living)
+
+merged_data_clean <- na.omit(merged_data)
+
+#View(merged_data_clean)
+```
+
+
+```{r}
+#write_csv(merged_data, "/Users/sunidi/Desktop/IDMP Project/merged_jobs_cost_data.csv")
+View(is.na(merged_data))
+```
+
+```{r}
+sum(is.na(merged_data_clean$Cost_of_Living)) 
+head(merged_data_clean) 
+
+```
+##Introduction:- 
+
+In the project, we set out to understand what a data science professional can realistically expect in terms of income—and more importantly, what that income means depending on where they work. To do this, we combined two different datasets that each tell part of the story.
+
+1. jobs in data(2020-2023):
+This dataset includes salary information for data science roles across several years. It covers key details like the year of employment, company location, experience level, and mode of work (remote, hybrid, or onsite). It's a great starting point for understanding how compensation trends vary by region and role.
+
+2. Cost of living and income(Extended):
+While knowing how much a job pays is useful, it's only half the picture. This second dataset gives insights into how much it costs to live in each country, helping us understand what someone’s take-home pay might actually mean in real terms.
+
+To make the data meaningful and usable, we first cleaned and aligned both datasets:
+
+- We made sure country names were in the same format (lowercase) and ensured the year fields were consistent.
+
+- Then, we merged the two datasets based on location and year.
+
+- Next, we created a new column called adjusted salary—this divides the salary (in USD) by the local cost of living index. The idea is to estimate how far a salary would actually go in each country.
+
+- Finally, we removed any incomplete rows to ensure our analysis was clean and reliable.
+
+## Visualization 1
+
+```{r}
+library(ggplot2)
+merged_data_clean$job_group <- case_when(
+  grepl("data", merged_data_clean$job_title, ignore.case = TRUE) ~ "Data",
+  grepl("engineer", merged_data_clean$job_title, ignore.case = TRUE) ~ "Engineering",
+  grepl("analyst", merged_data_clean$job_title, ignore.case = TRUE) ~ "Analytics",
+  grepl("scientist", merged_data_clean$job_title, ignore.case = TRUE) ~ "Data",
+  grepl("manager", merged_data_clean$job_title, ignore.case = TRUE) ~ "Management",
+  grepl("architect", merged_data_clean$job_title, ignore.case = TRUE) ~ "Architecture",
+  TRUE ~ "Other"
+)
+
+# Then run the plot
+ggplot(merged_data_clean, aes(x = job_group, y = adjusted_salary, fill = company_size)) +
+  geom_boxplot() +
+  labs(
+    title = "Adjusted Salary by Job Role Group and Company Size",
+    x = "Job Role Group",
+    y = "Adjusted Salary (USD)"
+  ) +
+  theme_minimal()
+
+
+```
+
+## Observations:-
+
+- The boxplot provides a visual breakdown of how adjusted salaries vary across job role groups and company sizes.
+
+- The "Data" group shows a wide salary spread with many outliers, especially in large companies.This suggests data roles have a broad salary range and may offer very high compensation in certain contexts.
+
+- "Engineering" has relatively high median adjusted salaries, particularly in medium-sized companies. There's noticeable consistency, indicating more predictable salary ranges.
+
+- While fewer in count, Architecture roles in medium companies show a notably higher median than other groups.
+
+- These groups tend to have lower adjusted salaries, especially in small companies. There’s also less variation, suggesting these roles are more standardized in pay.
+
+- Across most roles, medium and large companies tend to offer higher adjusted salaries than small companies. However, in roles like "Other", small companies occasionally show higher outliers—likely due to niche or specialized roles.
+
+- Significant outliers exist in "Data", "Engineering", and "Other" categories—indicating a small number of extremely well-paid roles.
+
+## Visualization 2
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+merged_data_clean %>%
+  group_by(experience_level) %>%
+  summarise(mean_adjusted_salary = mean(adjusted_salary, na.rm = TRUE)) %>%
+  ggplot(aes(x = experience_level, y = mean_adjusted_salary, fill = experience_level)) +
+  geom_col() +
+  labs(title = "Avg Adjusted Salary by Experience Level", x = "Experience Level", y = "Adjusted Salary") +
+  theme_minimal()
+
+```
+
+# Observations:-
+
+- This bar chart shows the average adjusted salary — i.e., salary normalized for cost of living — across four different experience levels: Entry-level, Mid-level, Senior, and Executive.
+
+- The chart clearly illustrates a positive correlation between experience level and compensation, validating the value placed on experience and responsibility in the data science job market. 
+
+- The consistent increase in adjusted salary from Entry to Executive level suggests a well-structured and experience-based pay hierarchy. 
+
+- This visualization can be used to support claims in your report or presentation about the importance of skill development, career progression, and negotiating compensation based on role and responsibility.
+
+- Salaries scale progressively with experience — suggesting a well-structured career ladder in the data industry.
+
+- Adjusted salary shows fairness across regions — Executive roles may earn more in real terms regardless of country.
+
+- Compensation is experience-dependent, but not necessarily location-dependent after adjustment.
+
+- This also hints at the return on investment (ROI) for gaining experience, certifications, and leadership responsibilities over time.
+
+- Executive-Level Roles Lead the Chart .The highest average adjusted salary is observed for Executive-level roles, highlighting their strategic importance and compensation for leadership and high-stakes responsibilities.
+
+- Senior Roles Follow Executives.Senior-level professionals also command significantly high adjusted salaries, indicating strong rewards for experience, specialization, and advanced responsibilities in technical or managerial domains.
+
+- Mid-Level is a Stepping Stone.Salaries for Mid-level employees sit comfortably between entry and senior roles, reflecting increased expertise but not yet the strategic influence or leadership expectations of more senior staff.
+
+- Entry-Level Roles Have the Lowest Salaries.As expected, Entry-level professionals earn the least on an adjusted basis. This is typical, as these roles often require less experience and serve as starting points in a data career
+
+## Visualization 3
+
+
+```{r}
+if ("Region" %in% colnames(merged_data_clean)) {
+  ggplot(merged_data_clean, aes(x = Region, y = adjusted_salary, fill = Region)) +
+    geom_boxplot() +
+    theme_minimal() +
+    labs(title = "Adjusted Salary by Region", x = "Region", y = "Adjusted Salary")
+}
+
+```
+
+## Observations:-
+
+This box plot illustrates the distribution of adjusted salaries  normalized for cost of living—across five global regions: Asia, Europe, North America, Oceania, and South America. 
+
+Europe and Oceania exhibit higher median adjusted salaries compared to other regions, indicating stronger cost-adjusted earning potential for data professionals in these areas. 
+
+North America shows a wide spread of salaries, with a dense cluster of high outliers. This suggests both significant earning potential and a diverse market in terms of role types and compensation structures. 
+
+Asia and South America have the lowest median adjusted salaries. However, outliers in these regions hint at specialized roles or senior-level positions that still command competitive compensation. 
+
+Europe has the widest interquartile range (IQR), reflecting a broader variability in compensation likely due to country-specific differences, cost of living variations, or disparities in role seniority. 
+
+Oceania stands out with a relatively high median salary and fewer extreme outliers, suggesting more consistent pay structures across roles within the region. 
+
+The presence of high outliers in all regions indicates that exceptional roles exist globally, even in lower-median regions—underscoring that skilled professionals can find strong opportunities worldwide. 
+
+Overall, this visualization highlights the importance of adjusting salaries for regional cost differences, allowing for a more equitable comparison of global compensation in data science roles. 
+
+For professionals evaluating international roles, this graph offers practical insights into where their skills might translate into stronger real-world earnings after adjusting for living expenses. 
+
+## Visualization 4
+
+```{r}
+
+table(merged_data_clean$experience_level, merged_data_clean$work_year)
+library(dplyr)
+library(ggplot2)
+
+
+avg_salary <- merged_data_clean %>%
+  filter(!is.na(salary_in_usd), !is.na(experience_level), !is.na(work_year)) %>%
+  group_by(work_year, experience_level) %>%
+  summarise(avg_salary = mean(salary_in_usd, na.rm = TRUE), .groups = "drop") %>%
+  mutate(experience_level = as.factor(experience_level))
+
+
+ggplot(avg_salary, aes(x = work_year, y = avg_salary, color = experience_level, group = experience_level)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+  labs(
+    title = "Average Salary Over Time by Experience Level (2020–2023)",
+    x = "Year",
+    y = "Average Salary (USD)",
+    color = "Experience Level"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "top")
+
+
+```
+
+```{r}
+
+unique(merged_data_clean$Region) 
+
+```
+
+
+## Observations:-
+
+
+
+
+
+
+
+
+
+
+
+## Visualization 5
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+region_experience <- merged_data_clean %>%
+  group_by(Region, experience_level) %>%
+  summarise(count = n(), .groups = "drop")
+
+```
+
+```{r}
+ggplot(merged_data_clean, aes(x = Cost_of_Living, y = salary_in_usd, color = experience_level)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  labs(title = "Salary vs Cost of Living", x = "Cost of Living Index", y = "Salary in USD") +
+  theme_minimal()
+
+```
+
+# Observations:- 
+
+The plot represents how salaries in USD relate to the Cost of Living Index, with points colored by experience level — Entry-level, Mid-level, Senior, and Executive.
+
+- No Strong Correlation Overall.The black regression line is nearly flat, indicating that there's  no significant linear relationship between salary and cost of living across the entire dataset.
+
+- This means higher living costs do not consistently lead to higher salaries.
+
+- Salary is More Influenced by Experience Level.Different experience levels are spread across the cost of living spectrum.
+
+- Executive and Senior roles (green and purple dots) tend to occupy higher salary ranges, even at  lower cost of living indices.
+
+- Entry-level roles (pink dots) are mostly concentrated in lower salary ranges, regardless of cost of living.
+
+- Outliers in High-Paying Jobs.A few roles across all experience levels have exceptionally high salaries (>$300,000), visible as scattered points far above the main cluster. 
+
+- Cost of Living Index Clustering.The X-axis shows clustering at specific cost of living values, likely because many respondents are from countries with similar living costs. 
+
+- Despite that, salaries within each cost cluster vary widely, suggesting that factors like company size, job role, and remote work have greater influence.
+
+- The chart shows that salary in USD does not strongly correlate with cost of living. However, experience level clearly influences salary. While cost of living might be considered by employers, it’s not a dominant factor in determining pay across the dataset.
+
+- This scatter plot suggests that while experience level is a strong predictor of salary, the cost of living of a location doesn't significantly impact salary in the data science job market — especially once normalized across global roles.
+
+
+## Visualization 6
+
+
+```{r}
+ggplot(merged_data_clean, aes(x = work_setting, y = adjusted_salary, fill = work_setting)) +
+  geom_boxplot() +
+  labs(title = "Adjusted Salary by Work Setting", x = "Work Setting", y = "Adjusted Salary") +
+  theme_minimal()
+
+```
+
+
+## Observations:-
+
+
+
+
+
+
+
+
+
+
+
+## Model building 
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(caret)
+library(car)
+library(dplyr)
+ 
+ 
+# STEP 1: Filter common job titles
+common_titles <- merged_data_clean %>%
+  count(job_title) %>%
+  filter(n >= 10) %>%
+  pull(job_title)
+ 
+model_data <- merged_data_clean %>% filter(job_title %in% common_titles)
+ 
+# STEP 2: Train-Test Split (50-50)
+set.seed(123)
+trainIndex <- createDataPartition(model_data$salary_in_usd, p = 0.5, list = FALSE)
+train_data <- model_data[trainIndex, ]
+test_data  <- model_data[-trainIndex, ]
+
+```
+
+```{r}
+ 
+# STEP 3: Calculate RMSE for Individual Predictors
+predictors <- c("experience_level", "job_title", "company_size", "work_setting","Cost_of_Living","Average_Monthly_Income")
+rmse_values <- c()
+ 
+for (predictor in predictors) {
+  formula <- as.formula(paste("salary_in_usd ~", predictor))
+  model <- lm(formula, data = train_data)
+  predictions <- predict(model, newdata = test_data)
+  rmse <- sqrt(mean((test_data$salary_in_usd - predictions)^2, na.rm = TRUE))
+  rmse_values <- c(rmse_values, rmse)
+}
+ 
+rmse_results <- data.frame(Predictor = predictors, RMSE = rmse_values)
+print(rmse_results)
+
+```
+
+```{r} 
+ 
+# STEP 5: Full Model with All Predictors
+model_full <- lm(salary_in_usd ~ experience_level + job_title + company_size + work_setting,
+                 data = train_data)
+summary(model_full)
+
+```
+
+```{r}
+ 
+# STEP 7: Predict on Test Data
+predictions_step <- predict(model_full, newdata = test_data)
+rmse_step <- sqrt(mean((test_data$salary_in_usd - predictions_step)^2, na.rm = TRUE))
+cat("RMSE for model:", rmse_step, "\n")
+
+```
+
+```{r} 
+# STEP 8: Diagnostic Plots
+par(mfrow = c(2, 2))
+plot(model_full)
+```
+
+
+# CHATBOT : Using custom values for predicting the salary trends
+
+```{r}
+# Predefined allowed job titles
+allowed_job_titles <- c(
+  "AI Architect", "AI Developer", "AI Engineer", "AI Programmer", "AI Research Engineer", "AI Scientist",
+  "Analytics Engineer", "Applied Data Scientist", "Applied Machine Learning Engineer", 
+  "Applied Machine Learning Scientist", "Applied Scientist", "AWS Data Architect",
+  "BI Analyst", "BI Data Analyst", "BI Data Engineer", "BI Developer",
+  "Big Data Architect", "Big Data Engineer"
+)
+
+# Filter allowed job titles to those actually present in the training data
+allowed_job_titles <- intersect(allowed_job_titles, levels(train_data$job_title))
+
+# Function to ask for input with validation
+ask_input <- function(prompt_text, valid_options) {
+  repeat {
+    input <- readline(paste0(prompt_text, "\nOptions: ", paste(valid_options, collapse = ", "), "\n> "))
+    if (input %in% valid_options) {
+      return(input)
+    } else {
+      cat("Invalid input. Please enter one of the listed options.\n\n")
+    }
+  }
+}
+
+# Assuming train_data and model_lm are already loaded
+exp_levels <- levels(train_data$experience_level)
+company_sizes <- levels(train_data$company_size)
+work_modes <- levels(train_data$work_setting)
+
+# Interactive user input
+user_experience <- ask_input("Enter your experience level", exp_levels)
+user_job_title <- ask_input("Enter your job title", allowed_job_titles)
+user_company_size <- ask_input("Enter the company size", company_sizes)
+user_work_setting <- ask_input("Enter the work setting", work_modes)
+
+# Create the input data frame for prediction
+custom_input <- data.frame(
+  experience_level = factor(user_experience, levels = exp_levels),
+  job_title = factor(user_job_title, levels = levels(train_data$job_title)),
+  company_size = factor(user_company_size, levels = company_sizes),
+  work_setting = factor(user_work_setting, levels = work_modes)
+)
+
+# Predict the salary
+predicted_salary <- predict(model_lm, newdata = custom_input)
+
+# Output the prediction
+cat("\nPredicted Salary (USD):", round(predicted_salary, 2), "\n")
+
+
+```
+
+
+
+
+
+
+
+
+
